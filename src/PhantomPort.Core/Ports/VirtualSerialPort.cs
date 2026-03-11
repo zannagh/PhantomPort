@@ -10,9 +10,21 @@ namespace PhantomPort;
 /// <see cref="PlatformNotSupportedException"/>.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Instances must be created via <see cref="CreateUninitializedInstance{T}"/> followed by
 /// <see cref="InitializePort"/> to bypass the <see cref="SerialPort"/> constructor, which throws
 /// <see cref="PlatformNotSupportedException"/> on macOS.
+/// </para>
+/// <para>
+/// <b>Port discoverability:</b> For the virtual port to appear in
+/// <see cref="SerialPort.GetPortNames()"/>, the process must run with elevated permissions
+/// (sudo on macOS/Linux, admin on Windows). On POSIX, a symlink is created in <c>/dev/</c>
+/// matching the pattern that <see cref="SerialPort.GetPortNames()"/> scans for
+/// (e.g. <c>/dev/tty.PhantomPort-*</c> on macOS). On Windows, <c>DefineDosDevice</c> maps a
+/// COM port name but the registry entry at <c>HKLM\HARDWARE\DEVICEMAP\SERIALCOMM</c> may also
+/// require admin access. Without elevation, the port still works for direct I/O via
+/// <see cref="DevicePath"/> — it just won't be discoverable through <see cref="SerialPort.GetPortNames()"/>.
+/// </para>
 /// </remarks>
 public abstract class VirtualSerialPort : SerialPort, IVirtualSerialPort
 {

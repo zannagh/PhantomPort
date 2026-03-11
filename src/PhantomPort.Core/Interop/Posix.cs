@@ -38,6 +38,12 @@ internal static partial class Posix
     [LibraryImport("libc", SetLastError = true)]
     internal static partial int tcsetattr(int fd, int optionalActions, nint termios);
 
+    [LibraryImport("libc", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial int symlink(string target, string linkpath);
+
+    [LibraryImport("libc", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial int unlink(string pathname);
+
     internal const int O_RDWR = 2;
     internal const int TCSANOW = 0;
 

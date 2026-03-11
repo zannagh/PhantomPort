@@ -1,3 +1,4 @@
+using System.IO.Ports;
 using System.Text;
 using PhantomPort.Interop;
 using Xunit;
@@ -58,6 +59,20 @@ public class PosixVirtualSerialPortTests
         {
             Posix.close(slaveFd);
         }
+    }
+
+    [SkippableFact]
+    public void VirtualPort_AppearsInGetPortNames()
+    {
+        Skip.IfNot(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS());
+        Skip.IfNot(TestEnvironment.IsElevated,
+            "Requires root — run with sudo for system-level serial port discovery");
+
+        using var port = VirtualSerialPortFactory.Create();
+
+        var portNames = SerialPort.GetPortNames();
+
+        Assert.Contains(port.DevicePath, portNames);
     }
 
     [SkippableFact]

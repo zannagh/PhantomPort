@@ -13,15 +13,17 @@ internal sealed class PosixVirtualSerialPort : VirtualSerialPort
     private int _masterFd;
     private int _slaveFd;
     private PosixDeviceStream _stream = null!;
+    private string? _symlinkPath;
     private bool _disposed;
 
     public override Stream Stream => _stream;
 
-    private void Initialize(int masterFd, int slaveFd, string devicePath)
+    private void Initialize(int masterFd, int slaveFd, string devicePath, string? symlinkPath)
     {
-        InitializePort(devicePath);
+        InitializePort(symlinkPath ?? devicePath);
         _masterFd = masterFd;
         _slaveFd = slaveFd;
+        _symlinkPath = symlinkPath;
         _stream = new PosixDeviceStream(masterFd);
     }
 
@@ -67,8 +69,9 @@ internal sealed class PosixVirtualSerialPort : VirtualSerialPort
             try
             {
                 ConfigureRawMode(slaveFd);
+                var symlinkPath = TryCreateDiscoverableSymlink(devicePath);
                 var port = CreateUninitializedInstance<PosixVirtualSerialPort>();
-                port.Initialize(masterFd, slaveFd, devicePath);
+                port.Initialize(masterFd, slaveFd, devicePath, symlinkPath);
                 return port;
             }
             catch
@@ -114,6 +117,24 @@ internal sealed class PosixVirtualSerialPort : VirtualSerialPort
         }
     }
 
+    /// <summary>
+    /// Attempts to create a symlink in /dev/ with a name pattern that SerialPort.GetPortNames()
+    /// will discover. On macOS this means /dev/tty.PhantomPort-XXX (matches the tty.* glob).
+    /// On Linux, /dev/ttyPhantom_XXX (matches common serial port enumeration patterns).
+    /// Returns the symlink path on success, null if the symlink could not be created (e.g. no
+    /// write permission to /dev/, which typically requires root).
+    /// </summary>
+    private static string? TryCreateDiscoverableSymlink(string devicePath)
+    {
+        var id = Guid.NewGuid().ToString("N")[..8];
+
+        var symlinkPath = OperatingSystem.IsMacOS()
+            ? $"/dev/tty.PhantomPort-{id}"
+            : $"/dev/ttyPhantom_{id}";
+
+        return Posix.symlink(devicePath, symlinkPath) == 0 ? symlinkPath : null;
+    }
+
     [DoesNotReturn]
     private static void ThrowPosixError(string function)
     {
@@ -128,6 +149,10 @@ internal sealed class PosixVirtualSerialPort : VirtualSerialPort
             return;
         }
         _disposed = true;
+
+        if (_symlinkPath is not null)
+            Posix.unlink(_symlinkPath);
+
         _stream.MarkDisposed();
         Posix.close(_slaveFd);
         Posix.close(_masterFd);

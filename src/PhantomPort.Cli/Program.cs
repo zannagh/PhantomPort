@@ -1,6 +1,15 @@
 using System.Text;
 using PhantomPort;
 
+/// <summary>
+/// Demo console application that creates a virtual serial port and listens for incoming data.
+/// </summary>
+/// <remarks>
+/// For the virtual port to appear in <c>SerialPort.GetPortNames()</c> (so that other applications
+/// can discover it), this process must run with elevated permissions (sudo on macOS/Linux, admin
+/// on Windows). Without elevation, the port still works — connect to it directly via the printed
+/// device path.
+/// </remarks>
 internal class Program
 {
     public static void Main(string[] args)

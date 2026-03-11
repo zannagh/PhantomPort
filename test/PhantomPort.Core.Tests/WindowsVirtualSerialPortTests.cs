@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using System.IO.Ports;
 using System.Text;
 using Xunit;
 
@@ -26,6 +27,20 @@ public class WindowsVirtualSerialPortTests
         Assert.True(
             port.DevicePath.StartsWith("COM") || port.DevicePath.StartsWith(@"\\.\pipe\"),
             $"Unexpected DevicePath format: {port.DevicePath}");
+    }
+
+    [SkippableFact]
+    public void VirtualPort_AppearsInGetPortNames()
+    {
+        Skip.IfNot(OperatingSystem.IsWindows());
+        Skip.IfNot(TestEnvironment.IsElevated,
+            "Requires Administrator — run as admin for system-level serial port discovery");
+
+        using var port = VirtualSerialPortFactory.Create();
+
+        var portNames = SerialPort.GetPortNames();
+
+        Assert.Contains(port.DevicePath, portNames);
     }
 
     [SkippableFact]
